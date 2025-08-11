@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Trading Journal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+    header { background: #222; color: #fff; padding: 1em; text-align: center; }
+    .container { max-width: 800px; margin: auto; padding: 20px; background: #fff; margin-top: 20px; border-radius: 10px; }
+    input, textarea, button { width: 100%; padding: 10px; margin-top: 10px; }
+    button { background: #28a745; border: none; color: #fff; cursor: pointer; }
+    button:hover { background: #218838; }
+    .note { background: #f9f9f9; padding: 10px; margin: 10px 0; border-radius: 5px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Trading Journal</h1>
+  <p>Log your mistakes, predictions, capital & PnL</p>
+</header>
+
+<div class="container">
+  <h2>Login</h2>
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+  <button onclick="signup()">Sign Up</button>
+
+  <h2>New Entry</h2>
+  <textarea id="notes" placeholder="What did you learn today?"></textarea>
+  <input type="text" id="prediction" placeholder="Prediction (Tomorrow/Weekly/Monthly)">
+  <input type="number" id="capital" placeholder="Capital Used">
+  <input type="number" id="pnl" placeholder="PnL">
+  <button onclick="saveEntry()">Save Entry</button>
+
+  <h2>Your Notes</h2>
+  <div id="entries"></div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+<script>
+  // Your Firebase Config
+  const firebaseConfig = {
+    apiKey: "AIzaSyC6dN0FSLcst_urji3svxSvxjbUVhipUwk",
+    authDomain: "tradingjournal1234567.firebaseapp.com",
+    projectId: "tradingjournal1234567",
+    storageBucket: "tradingjournal1234567.firebasestorage.app",
+    messagingSenderId: "955494103341",
+    appId: "1:955494103341:web:64e91c452adb6754cbfba4",
+    measurementId: "G-YH0FMBNE1B"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  function signup() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+    auth.createUserWithEmailAndPassword(email, password)
+      .then(() => alert("Signed up!"))
+      .catch(err => alert(err.message));
+  }
+
+  function login() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+    auth.signInWithEmailAndPassword(email, password)
+      .then(() => alert("Logged in!"))
+      .catch(err => alert(err.message));
+  }
+
+  function saveEntry() {
+    const user = auth.currentUser;
+    if (!user) {
+      alert("Please log in first!");
+      return;
+    }
+    const notes = document.getElementById("notes").value;
+    const prediction = document.getElementById("prediction").value;
+    const capital = document.getElementById("capital").value;
+    const pnl = document.getElementById("pnl").value;
+    db.collection("entries").add({
+      uid: user.uid,
+      notes,
+      prediction,
+      capital,
+      pnl,
+      timestamp: new Date()
+    }).then(() => {
+      alert("Entry saved!");
+      loadEntries();
+    });
+  }
+
+  function loadEntries() {
+    const user = auth.currentUser;
+    if (!user) return;
+    db.collection("entries").where("uid", "==", user.uid).orderBy("timestamp", "desc")
+      .onSnapshot(snapshot => {
+        const entriesDiv = document.getElementById("entries");
+        entriesDiv.innerHTML = "";
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          entriesDiv.innerHTML += `
+            <div class="note">
+              <p><strong>Notes:</strong> ${data.notes}</p>
+              <p><strong>Prediction:</strong> ${data.prediction}</p>
+              <p><strong>Capital:</strong> ${data.capital}</p>
+              <p><strong>PnL:</strong> ${data.pnl}</p>
+              <small>${data.timestamp.toDate()}</small>
+            </div>
+          `;
+        });
+      });
+  }
+
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      loadEntries();
+    }
+  });
+</script>
+
+</body>
+</html>
